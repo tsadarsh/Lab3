@@ -2,6 +2,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
+#include <string>
+#include <iostream>
+
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 
 // Include GLEW
 #include <GL/glew.h>
@@ -20,6 +30,124 @@ using namespace glm;
 #include <common/controls.hpp>
 #include <common/objloader.hpp>
 #include <common/vboindexer.hpp>
+
+std::vector<unsigned short> indices1;
+std::vector<glm::vec3> indexed_vertices1;
+std::vector<glm::vec2> indexed_uvs1;
+std::vector<glm::vec3> indexed_normals1;
+
+struct Vertex {
+    glm::vec3 position;
+    glm::vec3 normal;
+    glm::vec2 texCoords;
+};
+
+std::vector<Vertex> vertices;
+std::vector<unsigned int> indices;
+std::vector<GLuint> textures; 
+
+void loadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName) {
+    for (unsigned int i = 0; i < mat->GetTextureCount(type); i++) {
+        aiString str;
+        mat->GetTexture(type, i, &str);
+
+        // Convert the aiString to std::string for easier handling
+        std::string fullPath = "assets/textures/" + std::string(str.C_Str());
+
+		std::cout << "Finding texture at: " << fullPath << std::endl;
+        
+        // Load the texture file using an image loader (e.g., stb_image.h)
+        int width, height, nrChannels;
+        unsigned char* data = stbi_load(fullPath.c_str(), &width, &height, &nrChannels, 0);
+        
+        if (data) {
+            GLuint textureID;
+            glGenTextures(1, &textureID);
+            glBindTexture(GL_TEXTURE_2D, textureID);
+
+			textures.push_back(textureID);
+            
+            // Load the texture data into OpenGL
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+            glGenerateMipmap(GL_TEXTURE_2D);
+            
+            // Set texture parameters
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            
+            stbi_image_free(data); // Free the image memory after uploading to GPU
+        } else {
+            std::cerr << "Failed to load texture: " << fullPath << std::endl;
+        }
+    }
+}
+
+void processMesh(aiMesh* mesh, const aiScene* scene) {
+    for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
+        Vertex vertex;
+        
+        // Position
+        vertex.position = glm::vec3(mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z);
+        
+        // Normals
+        if (mesh->HasNormals()) {
+            vertex.normal = glm::vec3(mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z);
+        }
+        
+        // Texture coordinates (UVs)
+        if (mesh->mTextureCoords[0]) { // Does the mesh contain texture coordinates?
+            vertex.texCoords = glm::vec2(mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y);
+        } else {
+            vertex.texCoords = glm::vec2(0.0f, 0.0f);
+        }
+        vertices.push_back(vertex);
+    }
+
+	// Get the material index from the mesh
+	if (mesh->mMaterialIndex >= 0) {
+	// Retrieve the material for this mesh
+	aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+	
+	// Now we can process the material and load textures
+	loadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse");
+	}
+
+    // Process indices (faces)
+    for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
+        aiFace face = mesh->mFaces[i];
+        for (unsigned int j = 0; j < face.mNumIndices; j++) {
+            indices.push_back(face.mIndices[j]);
+        }
+    }
+}
+
+void processNode(aiNode* node, const aiScene* scene) {
+    // Process all meshes in this node
+    for (unsigned int i = 0; i < node->mNumMeshes; i++) {
+        aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
+        processMesh(mesh, scene); // Function to handle mesh processing
+    }
+
+    // Recursively process each child node
+    for (unsigned int i = 0; i < node->mNumChildren; i++) {
+        processNode(node->mChildren[i], scene);
+    }
+}
+
+void loadOBJ(const std::string filename,
+	std::vector<unsigned short> indices,
+	std::vector<glm::vec3> indexed_vertices,
+	std::vector<glm::vec2> indexed_uvs,
+	std::vector<glm::vec3> indexed_normals)
+{
+	bool success = loadAssImp(filename.c_str(), indices, indexed_vertices, indexed_uvs, indexed_normals);
+	if (!success) {
+		std::cerr << "Unable to load: " << filename << std::endl;
+		exit(1);
+	}
+}
 
 int main( void )
 {
@@ -76,9 +204,49 @@ int main( void )
 	// Cull triangles which normal is not towards the camera
 	glEnable(GL_CULL_FACE);
 
-	GLuint VertexArrayID;
-	glGenVertexArrays(1, &VertexArrayID);
-	glBindVertexArray(VertexArrayID);
+	Assimp::Importer importer;
+
+	// Load the model file
+	const aiScene* scene = importer.ReadFile("assets/geometry/chess-board.obj", 
+							aiProcess_Triangulate             | // Convert all shapes to triangles
+							aiProcess_FlipUVs                 | // Flip the UV coordinates if necessary
+							aiProcess_CalcTangentSpace        | // Compute tangents for normal mapping
+							aiProcess_JoinIdenticalVertices);   // Merge identical vertices
+
+	// Check if loading failed
+	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
+		std::cerr << "Error loading model: " << importer.GetErrorString() << std::endl;
+		return 0;
+	}
+
+	processNode(scene->mRootNode, scene);
+
+	GLuint VAO, VBO, EBO;
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(1, &VBO);
+	glGenBuffers(1, &EBO);
+
+	glBindVertexArray(VAO);
+
+	// Bind and set vertex buffer
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW);
+
+	// Bind and set index buffer
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
+
+	// Set vertex attribute pointers
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0); // Position
+	glEnableVertexAttribArray(0);
+
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal)); // Normal
+	glEnableVertexAttribArray(1);
+
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texCoords)); // Texture Coords
+	glEnableVertexAttribArray(2);
+
+	glBindVertexArray(0); // Unbind VAO
 
 	// Create and compile our GLSL program from the shaders
 	GLuint programID = LoadShaders( "shaders/StandardShading.vertexshader", "shaders/StandardShading.fragmentshader" );
@@ -89,40 +257,10 @@ int main( void )
 	GLuint ModelMatrixID = glGetUniformLocation(programID, "M");
 
 	// Load the texture
-	GLuint Texture = loadDDS("assets/textures/chess-board-inv.DDS");
+	//GLuint Texture = loadDDS("assets/textures/chess-board-inv.DDS");
 	
 	// Get a handle for our "myTextureSampler" uniform
-	GLuint TextureID  = glGetUniformLocation(programID, "myTextureSampler");
-
-	// Read our .obj file
-	std::vector<unsigned short> indices;
-	std::vector<glm::vec3> indexed_vertices;
-	std::vector<glm::vec2> indexed_uvs;
-	std::vector<glm::vec3> indexed_normals;
-	bool res = loadAssImp("assets/geometry/chess-board.obj", indices, indexed_vertices, indexed_uvs, indexed_normals);
-
-	// Load it into a VBO
-
-	GLuint vertexbuffer;
-	glGenBuffers(1, &vertexbuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-	glBufferData(GL_ARRAY_BUFFER, indexed_vertices.size() * sizeof(glm::vec3), &indexed_vertices[0], GL_STATIC_DRAW);
-
-	GLuint uvbuffer;
-	glGenBuffers(1, &uvbuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
-	glBufferData(GL_ARRAY_BUFFER, indexed_uvs.size() * sizeof(glm::vec2), &indexed_uvs[0], GL_STATIC_DRAW);
-
-	GLuint normalbuffer;
-	glGenBuffers(1, &normalbuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, normalbuffer);
-	glBufferData(GL_ARRAY_BUFFER, indexed_normals.size() * sizeof(glm::vec3), &indexed_normals[0], GL_STATIC_DRAW);
-
-	// Generate a buffer for the indices as well
-	GLuint elementbuffer;
-	glGenBuffers(1, &elementbuffer);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned short), &indices[0] , GL_STATIC_DRAW);
+	//GLuint TextureID  = glGetUniformLocation(programID, "myTextureSampler");
 
 	// Get a handle for our "LightPosition" uniform
 	glUseProgram(programID);
@@ -133,7 +271,6 @@ int main( void )
 	int nbFrames = 0;
 
 	do{
-
 		// Measure speed
 		double currentTime = glfwGetTime();
 		nbFrames++;
@@ -155,6 +292,7 @@ int main( void )
 		glm::mat4 ProjectionMatrix = getProjectionMatrix();
 		glm::mat4 ViewMatrix = getViewMatrix();
 		glm::mat4 ModelMatrix = glm::mat4(1.0);
+
 		glm::mat4 MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
 
 		// Send our transformation to the currently bound shader, 
@@ -166,62 +304,10 @@ int main( void )
 		glm::vec3 lightPos = glm::vec3(4,4,40);
 		glUniform3f(LightID, lightPos.x, lightPos.y, lightPos.z);
 
-		// Bind our texture in Texture Unit 0
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, Texture);
-		// Set our "myTextureSampler" sampler to use Texture Unit 0
-		glUniform1i(TextureID, 0);
-
-		// 1rst attribute buffer : vertices
-		glEnableVertexAttribArray(0);
-		glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-		glVertexAttribPointer(
-			0,                  // attribute
-			3,                  // size
-			GL_FLOAT,           // type
-			GL_FALSE,           // normalized?
-			0,                  // stride
-			(void*)0            // array buffer offset
-		);
-
-		// 2nd attribute buffer : UVs
-		glEnableVertexAttribArray(1);
-		glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
-		glVertexAttribPointer(
-			1,                                // attribute
-			2,                                // size
-			GL_FLOAT,                         // type
-			GL_FALSE,                         // normalized?
-			0,                                // stride
-			(void*)0                          // array buffer offset
-		);
-
-		// 3rd attribute buffer : normals
-		glEnableVertexAttribArray(2);
-		glBindBuffer(GL_ARRAY_BUFFER, normalbuffer);
-		glVertexAttribPointer(
-			2,                                // attribute
-			3,                                // size
-			GL_FLOAT,                         // type
-			GL_FALSE,                         // normalized?
-			0,                                // stride
-			(void*)0                          // array buffer offset
-		);
-
-		// Index buffer
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer);
-
-		// Draw the triangles !
-		glDrawElements(
-			GL_TRIANGLES,      // mode
-			indices.size(),    // count
-			GL_UNSIGNED_SHORT,   // type
-			(void*)0           // element array buffer offset
-		);
-
-		glDisableVertexAttribArray(0);
-		glDisableVertexAttribArray(1);
-		glDisableVertexAttribArray(2);
+		// Render the model
+		glBindVertexArray(VAO);
+		glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+		glBindVertexArray(0);
 
 		// Swap buffers
 		glfwSwapBuffers(window);
@@ -230,15 +316,6 @@ int main( void )
 	} // Check if the ESC key was pressed or the window was closed
 	while( glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
 		   glfwWindowShouldClose(window) == 0 );
-
-	// Cleanup VBO and shader
-	glDeleteBuffers(1, &vertexbuffer);
-	glDeleteBuffers(1, &uvbuffer);
-	glDeleteBuffers(1, &normalbuffer);
-	glDeleteBuffers(1, &elementbuffer);
-	glDeleteProgram(programID);
-	glDeleteTextures(1, &Texture);
-	glDeleteVertexArrays(1, &VertexArrayID);
 
 	// Close OpenGL window and terminate GLFW
 	glfwTerminate();
