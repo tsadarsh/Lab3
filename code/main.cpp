@@ -136,18 +136,6 @@ void processNode(aiNode* node, const aiScene* scene) {
     }
 }
 
-void loadOBJ(const std::string filename,
-	std::vector<unsigned short> indices,
-	std::vector<glm::vec3> indexed_vertices,
-	std::vector<glm::vec2> indexed_uvs,
-	std::vector<glm::vec3> indexed_normals)
-{
-	bool success = loadAssImp(filename.c_str(), indices, indexed_vertices, indexed_uvs, indexed_normals);
-	if (!success) {
-		std::cerr << "Unable to load: " << filename << std::endl;
-		exit(1);
-	}
-}
 
 int main( void )
 {
@@ -207,19 +195,30 @@ int main( void )
 	Assimp::Importer importer;
 
 	// Load the model file
-	const aiScene* scene = importer.ReadFile("assets/geometry/chess-board.obj", 
-							aiProcess_Triangulate             | // Convert all shapes to triangles
-							aiProcess_FlipUVs                 | // Flip the UV coordinates if necessary
-							aiProcess_CalcTangentSpace        | // Compute tangents for normal mapping
-							aiProcess_JoinIdenticalVertices);   // Merge identical vertices
+	// const aiScene* scene = importer.ReadFile("assets/geometry/chess-pieces.obj", 
+	// 						aiProcess_Triangulate             | // Convert all shapes to triangles
+	// 						aiProcess_FlipUVs                 | // Flip the UV coordinates if necessary
+	// 						aiProcess_CalcTangentSpace);      //  | // Compute tangents for normal mapping
+	// 						//aiProcess_JoinIdenticalVertices);   // Merge identical vertices
+
+	const aiScene* scene_chess_pieces = importer.ReadFile("assets/geometry/chess-pieces-small-decimated.obj", aiProcess_CalcTangentSpace | aiProcess_Triangulate | aiProcess_FlipUVs);
 
 	// Check if loading failed
-	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
+	if (!scene_chess_pieces || scene_chess_pieces->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene_chess_pieces->mRootNode) {
 		std::cerr << "Error loading model: " << importer.GetErrorString() << std::endl;
 		return 0;
 	}
 
-	processNode(scene->mRootNode, scene);
+	const aiScene* scene_chess_board = importer.ReadFile("assets/geometry/chess-board.obj", aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
+
+	// Check if loading failed
+	if (!scene_chess_board || scene_chess_board->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene_chess_board->mRootNode) {
+		std::cerr << "Error loading model: " << importer.GetErrorString() << std::endl;
+		return 0;
+	}
+
+	processNode(scene_chess_board->mRootNode, scene_chess_board);
+	processNode(scene_chess_pieces->mRootNode, scene_chess_pieces);
 
 	GLuint VAO, VBO, EBO;
 	glGenVertexArrays(1, &VAO);
