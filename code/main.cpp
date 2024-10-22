@@ -12,6 +12,9 @@
 #include <GLFW/glfw3.h>
 GLFWwindow* window;
 
+
+#include "c_loader.hpp"
+
 // Include GLM
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -25,6 +28,7 @@ using namespace glm;
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+
 
 std::vector<GLuint> textures; 
 GLuint textureID;
@@ -147,8 +151,6 @@ int main( void )
 	} else {
 		std::cerr << "Failed to load texture: " << fullPath2 << std::endl;
 	}
-
-
 	// Get a handle for our "myTextureSampler" uniform
 	GLuint TextureID  = glGetUniformLocation(programID, "myTextureSampler");
 
@@ -220,78 +222,88 @@ int main( void )
 		// Index buffer
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer);
 
-//model 2
-	GLuint VertexArrayID2;
-	glGenVertexArrays(1, &VertexArrayID2);
-	glBindVertexArray(VertexArrayID2);
-
-// Read our .obj file
 	std::vector<unsigned short> indices2;
 	std::vector<glm::vec3> indexed_vertices2;
 	std::vector<glm::vec2> indexed_uvs2;
 	std::vector<glm::vec3> indexed_normals2;
-	bool res2 = loadAssImp("assets/geometry/suzanne.obj", indices2, indexed_vertices2, indexed_uvs2, indexed_normals2);
+	GLuint VertexArrayID2;
+	glGenVertexArrays(1, &VertexArrayID2);
+	glBindVertexArray(VertexArrayID2);
+	std::string pathNew = "assets/geometry/new-pieces.obj";
+	c_loadOBJ(pathNew, indices2, indexed_vertices2, indexed_uvs2, indexed_normals2);
 
-	// Load it into a VBO
+// //model 2
+// 	GLuint VertexArrayID2;
+// 	glGenVertexArrays(1, &VertexArrayID2);
+// 	glBindVertexArray(VertexArrayID2);
 
-	GLuint vertexbuffer2;
-	glGenBuffers(1, &vertexbuffer2);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer2);
-	glBufferData(GL_ARRAY_BUFFER, indexed_vertices2.size() * sizeof(glm::vec3), &indexed_vertices2[0], GL_STATIC_DRAW);
+// // Read our .obj file
+// 	std::vector<unsigned short> indices2;
+// 	std::vector<glm::vec3> indexed_vertices2;
+// 	std::vector<glm::vec2> indexed_uvs2;
+// 	std::vector<glm::vec3> indexed_normals2;
+// 	bool res2 = loadAssImp("assets/geometry/new-pieces.obj", indices2, indexed_vertices2, indexed_uvs2, indexed_normals2);
 
-	GLuint uvbuffer2;
-	glGenBuffers(1, &uvbuffer2);
-	glBindBuffer(GL_ARRAY_BUFFER, uvbuffer2);
-	glBufferData(GL_ARRAY_BUFFER, indexed_uvs2.size() * sizeof(glm::vec2), &indexed_uvs2[0], GL_STATIC_DRAW);
+// 	// Load it into a VBO
 
-	GLuint normalbuffer2;
-	glGenBuffers(1, &normalbuffer2);
-	glBindBuffer(GL_ARRAY_BUFFER, normalbuffer2);
-	glBufferData(GL_ARRAY_BUFFER, indexed_normals2.size() * sizeof(glm::vec3), &indexed_normals2[0], GL_STATIC_DRAW);
+// 	GLuint vertexbuffer2;
+// 	glGenBuffers(1, &vertexbuffer2);
+// 	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer2);
+// 	glBufferData(GL_ARRAY_BUFFER, indexed_vertices2.size() * sizeof(glm::vec3), &indexed_vertices2[0], GL_STATIC_DRAW);
 
-	// Generate a buffer for the indices as well
-	GLuint elementbuffer2;
-	glGenBuffers(1, &elementbuffer2);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer2);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices2.size() * sizeof(unsigned short), &indices2[0] , GL_STATIC_DRAW);
+// 	GLuint uvbuffer2;
+// 	glGenBuffers(1, &uvbuffer2);
+// 	glBindBuffer(GL_ARRAY_BUFFER, uvbuffer2);
+// 	glBufferData(GL_ARRAY_BUFFER, indexed_uvs2.size() * sizeof(glm::vec2), &indexed_uvs2[0], GL_STATIC_DRAW);
 
-		glEnableVertexAttribArray(0);
-		glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer2);
-		glVertexAttribPointer(
-			0,                  // attribute
-			3,                  // size
-			GL_FLOAT,           // type
-			GL_FALSE,           // normalized?
-			0,                  // stride
-			(void*)0            // array buffer offset
-		);
+// 	GLuint normalbuffer2;
+// 	glGenBuffers(1, &normalbuffer2);
+// 	glBindBuffer(GL_ARRAY_BUFFER, normalbuffer2);
+// 	glBufferData(GL_ARRAY_BUFFER, indexed_normals2.size() * sizeof(glm::vec3), &indexed_normals2[0], GL_STATIC_DRAW);
 
-		// 2nd attribute buffer : UVs
-		glEnableVertexAttribArray(1);
-		glBindBuffer(GL_ARRAY_BUFFER, uvbuffer2);
-		glVertexAttribPointer(
-			1,                                // attribute
-			2,                                // size
-			GL_FLOAT,                         // type
-			GL_FALSE,                         // normalized?
-			0,                                // stride
-			(void*)0                          // array buffer offset
-		);
+// 	// Generate a buffer for the indices as well
+// 	GLuint elementbuffer2;
+// 	glGenBuffers(1, &elementbuffer2);
+// 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer2);
+// 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices2.size() * sizeof(unsigned short), &indices2[0] , GL_STATIC_DRAW);
 
-		// 3rd attribute buffer : normals
-		glEnableVertexAttribArray(2);
-		glBindBuffer(GL_ARRAY_BUFFER, normalbuffer2);
-		glVertexAttribPointer(
-			2,                                // attribute
-			3,                                // size
-			GL_FLOAT,                         // type
-			GL_FALSE,                         // normalized?
-			0,                                // stride
-			(void*)0                          // array buffer offset
-		);
+// 		glEnableVertexAttribArray(0);
+// 		glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer2);
+// 		glVertexAttribPointer(
+// 			0,                  // attribute
+// 			3,                  // size
+// 			GL_FLOAT,           // type
+// 			GL_FALSE,           // normalized?
+// 			0,                  // stride
+// 			(void*)0            // array buffer offset
+// 		);
 
-		// Index buffer
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer2);
+// 		// 2nd attribute buffer : UVs
+// 		glEnableVertexAttribArray(1);
+// 		glBindBuffer(GL_ARRAY_BUFFER, uvbuffer2);
+// 		glVertexAttribPointer(
+// 			1,                                // attribute
+// 			2,                                // size
+// 			GL_FLOAT,                         // type
+// 			GL_FALSE,                         // normalized?
+// 			0,                                // stride
+// 			(void*)0                          // array buffer offset
+// 		);
+
+// 		// 3rd attribute buffer : normals
+// 		glEnableVertexAttribArray(2);
+// 		glBindBuffer(GL_ARRAY_BUFFER, normalbuffer2);
+// 		glVertexAttribPointer(
+// 			2,                                // attribute
+// 			3,                                // size
+// 			GL_FLOAT,                         // type
+// 			GL_FALSE,                         // normalized?
+// 			0,                                // stride
+// 			(void*)0                          // array buffer offset
+// 		);
+
+// 		// Index buffer
+// 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer2);
 
 // end of model 2
 
