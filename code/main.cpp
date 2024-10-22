@@ -26,8 +26,10 @@ using namespace glm;
 #include <common/objloader.hpp>
 #include <common/vboindexer.hpp>
 
+#include <assimp/postprocess.h>     // Post processing flags
 
-std::vector<GLuint> textures; 
+
+std::vector<GLuint> texturesIds; 
 GLuint textureID;
 GLuint textureID2;
 std::vector<GLuint> VAOs;
@@ -90,14 +92,6 @@ int main( void )
 	GLuint tID;
 
 	glActiveTexture(GL_TEXTURE0);
-	tID = c_loadTexture("assets/textures/12951_Stone_Chess_Board_diff_flipped.jpg");
-	textures.push_back(tID);
-	TEXTURE_UNITS.push_back(GL_TEXTURE0);
-
-	glActiveTexture(GL_TEXTURE1);
-	tID = c_loadTexture("assets/textures/uvmap.jpg");
-	textures.push_back(tID);
-	TEXTURE_UNITS.push_back(GL_TEXTURE1);
 
 	// Get a handle for our "myTextureSampler" uniform
 	GLuint TextureID  = glGetUniformLocation(programID, "myTextureSampler");
@@ -107,24 +101,31 @@ int main( void )
 	GLsizei IDX_size;
 	glm::mat4 ModelMatrix;
 
-	VAO_ID = c_loadOBJ("assets/geometry/chess-board.obj", 0, IDX_size);
+	VAO_ID = c_loadOBJ("assets/geometry/chess-board.obj", 0, IDX_size, texturesIds, 0);
 	VAOs.push_back(VAO_ID);
 	ModelMatrix = glm::mat4(1.0);
 	model_matrices.push_back(ModelMatrix);
 	indices_size.push_back(IDX_size);
 	
-	for (int i = 0; i < 12; i++) 
+	for (int i = 0; i < 1; i++) 
 	{
-		VAO_ID = c_loadOBJ("assets/geometry/new-pieces.obj", i, IDX_size);
+		VAO_ID = c_loadOBJ("assets/geometry/new-pieces.obj", i, IDX_size, texturesIds, 0);
 		VAOs.push_back(VAO_ID);
 		ModelMatrix = glm::mat4(1.0);
 		model_matrices.push_back(ModelMatrix);
 		indices_size.push_back(IDX_size);
 	}
 
+	std::cout << "Got these Texture IDs: " << std::endl;
+	for (int i=0; i < texturesIds.size(); i++)
+	{
+		std::cout << texturesIds[i] << std::endl;
+	}
+
 	// Get a handle for our "LightPosition" uniform
 	glUseProgram(programID);
 	GLuint LightID = glGetUniformLocation(programID, "LightPosition_worldspace");
+	glUniform1i(TextureID, 0);
 
 	// For speed computation
 	double lastTime = glfwGetTime();
@@ -163,66 +164,12 @@ int main( void )
 			MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
 			glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVP[0][0]);
 			glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
-			glActiveTexture(TEXTURE_UNITS[iObj]);
-			glUniform1i(TextureID, iObj); // do not use textures[iObj]
+			glBindTexture(GL_TEXTURE_2D, texturesIds[iObj]);
 			glBindVertexArray(VAOs[iObj]);
 			glDrawElements(GL_TRIANGLES, indices_size[iObj], GL_UNSIGNED_SHORT, (void*)0);
 
 			glBindVertexArray(0);
 		}
-		// glm::mat4 ModelMatrix = glm::mat4(1.0);
-		// glm::mat4 MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
-
-		// // Send our transformation to the currently bound shader, 
-		// // in the "MVP" uniform
-		// glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVP[0][0]);
-		// glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
-		// glUniformMatrix4fv(ViewMatrixID, 1, GL_FALSE, &ViewMatrix[0][0]);
-
-		// glm::vec3 lightPos = glm::vec3(4,4,4);
-		// glUniform3f(LightID, lightPos.x, lightPos.y, lightPos.z);
-
-		// // Bind our texture in Texture Unit 0
-		// glActiveTexture(GL_TEXTURE0);
-		// // glBindTexture(GL_TEXTURE_2D, textureID);
-		// // Set our "myTextureSampler" sampler to use Texture Unit 0
-		// glUniform1i(TextureID, 0);
-
-		// glBindVertexArray(VertexArrayID);
-		// //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer);
-
-		// // Draw the triangles !
-		// glDrawElements(
-		// 	GL_TRIANGLES,      // mode
-		// 	indices.size(),    // count
-		// 	GL_UNSIGNED_SHORT,   // type
-		// 	(void*)0           // element array buffer offset
-		// );
-
-		// glBindVertexArray(0);
-
-		// glBindVertexArray(VertexArrayID2);
-		// glActiveTexture(GL_TEXTURE1);
-		// glUniform1i(TextureID, 1);
-		// // glBindTexture(GL_TEXTURE_2D, textureID2);
-		// glm::mat4 ModelMatrix2 = glm::mat4(1.0);
-		// ModelMatrix2 = glm::translate(ModelMatrix2, glm::vec3(2.0f, 0.0f, 0.0f));
-		// glm::mat4 MVP2 = ProjectionMatrix * ViewMatrix * ModelMatrix2;
-
-		// // Send our transformation to the currently bound shader, 
-		// // in the "MVP" uniform
-		// glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVP2[0][0]);
-		// glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix2[0][0]);
-		
-		// // Draw the triangles !
-		// glDrawElements(
-		// 	GL_TRIANGLES,      // mode
-		// 	indices2.size(),    // count
-		// 	GL_UNSIGNED_SHORT,   // type
-		// 	(void*)0           // element array buffer offset
-		// );
-
-		// glBindVertexArray(0);
 
 		// Swap buffers
 		glfwSwapBuffers(window);
