@@ -5,14 +5,6 @@
 #include <string>
 #include <iostream>
 
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
-
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
-
-
 // Include GLEW
 #include <GL/glew.h>
 
@@ -31,111 +23,12 @@ using namespace glm;
 #include <common/objloader.hpp>
 #include <common/vboindexer.hpp>
 
-std::vector<unsigned short> indices1;
-std::vector<glm::vec3> indexed_vertices1;
-std::vector<glm::vec2> indexed_uvs1;
-std::vector<glm::vec3> indexed_normals1;
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
-struct Vertex {
-    glm::vec3 position;
-    glm::vec3 normal;
-    glm::vec2 texCoords;
-};
-
-std::vector<Vertex> vertices;
-std::vector<unsigned int> indices;
 std::vector<GLuint> textures; 
-
-void loadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName) {
-    for (unsigned int i = 0; i < mat->GetTextureCount(type); i++) {
-        aiString str;
-        mat->GetTexture(type, i, &str);
-
-        // Convert the aiString to std::string for easier handling
-        std::string fullPath = "assets/textures/" + std::string(str.C_Str());
-
-		std::cout << "Finding texture at: " << fullPath << std::endl;
-        
-        // Load the texture file using an image loader (e.g., stb_image.h)
-        int width, height, nrChannels;
-        unsigned char* data = stbi_load(fullPath.c_str(), &width, &height, &nrChannels, 0);
-        
-        if (data) {
-            GLuint textureID;
-            glGenTextures(1, &textureID);
-            glBindTexture(GL_TEXTURE_2D, textureID);
-
-			textures.push_back(textureID);
-            
-            // Load the texture data into OpenGL
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-            glGenerateMipmap(GL_TEXTURE_2D);
-            
-            // Set texture parameters
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            
-            stbi_image_free(data); // Free the image memory after uploading to GPU
-        } else {
-            std::cerr << "Failed to load texture: " << fullPath << std::endl;
-        }
-    }
-}
-
-void processMesh(aiMesh* mesh, const aiScene* scene) {
-    for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
-        Vertex vertex;
-        
-        // Position
-        vertex.position = glm::vec3(mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z);
-        
-        // Normals
-        if (mesh->HasNormals()) {
-            vertex.normal = glm::vec3(mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z);
-        }
-        
-        // Texture coordinates (UVs)
-        if (mesh->mTextureCoords[0]) { // Does the mesh contain texture coordinates?
-            vertex.texCoords = glm::vec2(mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y);
-        } else {
-            vertex.texCoords = glm::vec2(0.0f, 0.0f);
-        }
-        vertices.push_back(vertex);
-    }
-
-	// Get the material index from the mesh
-	if (mesh->mMaterialIndex >= 0) {
-	// Retrieve the material for this mesh
-	aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-	
-	// Now we can process the material and load textures
-	loadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse");
-	}
-
-    // Process indices (faces)
-    for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
-        aiFace face = mesh->mFaces[i];
-        for (unsigned int j = 0; j < face.mNumIndices; j++) {
-            indices.push_back(face.mIndices[j]);
-        }
-    }
-}
-
-void processNode(aiNode* node, const aiScene* scene) {
-    // Process all meshes in this node
-    for (unsigned int i = 0; i < node->mNumMeshes; i++) {
-        aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-        processMesh(mesh, scene); // Function to handle mesh processing
-    }
-
-    // Recursively process each child node
-    for (unsigned int i = 0; i < node->mNumChildren; i++) {
-        processNode(node->mChildren[i], scene);
-    }
-}
-
+GLuint textureID;
+GLuint textureID2;
 
 int main( void )
 {
@@ -192,60 +85,9 @@ int main( void )
 	// Cull triangles which normal is not towards the camera
 	glEnable(GL_CULL_FACE);
 
-	Assimp::Importer importer;
-
-	// Load the model file
-	// const aiScene* scene = importer.ReadFile("assets/geometry/chess-pieces.obj", 
-	// 						aiProcess_Triangulate             | // Convert all shapes to triangles
-	// 						aiProcess_FlipUVs                 | // Flip the UV coordinates if necessary
-	// 						aiProcess_CalcTangentSpace);      //  | // Compute tangents for normal mapping
-	// 						//aiProcess_JoinIdenticalVertices);   // Merge identical vertices
-
-	const aiScene* scene_chess_pieces = importer.ReadFile("assets/geometry/chess-pieces-small-decimated.obj", aiProcess_CalcTangentSpace | aiProcess_Triangulate | aiProcess_FlipUVs);
-
-	// Check if loading failed
-	if (!scene_chess_pieces || scene_chess_pieces->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene_chess_pieces->mRootNode) {
-		std::cerr << "Error loading model: " << importer.GetErrorString() << std::endl;
-		return 0;
-	}
-
-	const aiScene* scene_chess_board = importer.ReadFile("assets/geometry/chess-board.obj", aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
-
-	// Check if loading failed
-	if (!scene_chess_board || scene_chess_board->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene_chess_board->mRootNode) {
-		std::cerr << "Error loading model: " << importer.GetErrorString() << std::endl;
-		return 0;
-	}
-
-	processNode(scene_chess_board->mRootNode, scene_chess_board);
-	processNode(scene_chess_pieces->mRootNode, scene_chess_pieces);
-
-	GLuint VAO, VBO, EBO;
-	glGenVertexArrays(1, &VAO);
-	glGenBuffers(1, &VBO);
-	glGenBuffers(1, &EBO);
-
-	glBindVertexArray(VAO);
-
-	// Bind and set vertex buffer
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW);
-
-	// Bind and set index buffer
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
-
-	// Set vertex attribute pointers
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0); // Position
-	glEnableVertexAttribArray(0);
-
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal)); // Normal
-	glEnableVertexAttribArray(1);
-
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texCoords)); // Texture Coords
-	glEnableVertexAttribArray(2);
-
-	glBindVertexArray(0); // Unbind VAO
+	GLuint VertexArrayID;
+	glGenVertexArrays(1, &VertexArrayID);
+	glBindVertexArray(VertexArrayID);
 
 	// Create and compile our GLSL program from the shaders
 	GLuint programID = LoadShaders( "shaders/StandardShading.vertexshader", "shaders/StandardShading.fragmentshader" );
@@ -256,10 +98,202 @@ int main( void )
 	GLuint ModelMatrixID = glGetUniformLocation(programID, "M");
 
 	// Load the texture
-	//GLuint Texture = loadDDS("assets/textures/chess-board-inv.DDS");
-	
+	std::string fullPath = "assets/textures/12951_Stone_Chess_Board_diff_flipped.jpg";
+	int width, height, nrChannels;
+	unsigned char* data = stbi_load(fullPath.c_str(), &width, &height, &nrChannels, 0);
+	if (data) {
+		glActiveTexture(GL_TEXTURE0);
+		glGenTextures(1, &textureID);
+		glBindTexture(GL_TEXTURE_2D, textureID);
+
+		textures.push_back(textureID);
+		
+		// Load the texture data into OpenGL
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D);
+		
+		// Set texture parameters
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		
+		stbi_image_free(data); // Free the image memory after uploading to GPU
+	} else {
+		std::cerr << "Failed to load texture: " << fullPath << std::endl;
+	}
+
+	std::string fullPath2 = "assets/textures/uvmap.jpg";
+	int width2, height2, nrChannels2;
+	unsigned char* data2 = stbi_load(fullPath2.c_str(), &width2, &height2, &nrChannels2, 0);
+	if (data2) {
+		glActiveTexture(GL_TEXTURE1);
+		glGenTextures(1, &textureID2);
+		glBindTexture(GL_TEXTURE_2D, textureID2);
+
+		textures.push_back(textureID2);
+		
+		// Load the texture data into OpenGL
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width2, height2, 0, GL_RGB, GL_UNSIGNED_BYTE, data2);
+		glGenerateMipmap(GL_TEXTURE_2D);
+		
+		// Set texture parameters
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		
+		stbi_image_free(data2); // Free the image memory after uploading to GPU
+	} else {
+		std::cerr << "Failed to load texture: " << fullPath2 << std::endl;
+	}
+
+
 	// Get a handle for our "myTextureSampler" uniform
-	//GLuint TextureID  = glGetUniformLocation(programID, "myTextureSampler");
+	GLuint TextureID  = glGetUniformLocation(programID, "myTextureSampler");
+
+	// Read our .obj file
+	std::vector<unsigned short> indices;
+	std::vector<glm::vec3> indexed_vertices;
+	std::vector<glm::vec2> indexed_uvs;
+	std::vector<glm::vec3> indexed_normals;
+	bool res = loadAssImp("assets/geometry/chess-board.obj", indices, indexed_vertices, indexed_uvs, indexed_normals);
+
+	// Load it into a VBO
+
+	GLuint vertexbuffer;
+	glGenBuffers(1, &vertexbuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
+	glBufferData(GL_ARRAY_BUFFER, indexed_vertices.size() * sizeof(glm::vec3), &indexed_vertices[0], GL_STATIC_DRAW);
+
+	GLuint uvbuffer;
+	glGenBuffers(1, &uvbuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
+	glBufferData(GL_ARRAY_BUFFER, indexed_uvs.size() * sizeof(glm::vec2), &indexed_uvs[0], GL_STATIC_DRAW);
+
+	GLuint normalbuffer;
+	glGenBuffers(1, &normalbuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, normalbuffer);
+	glBufferData(GL_ARRAY_BUFFER, indexed_normals.size() * sizeof(glm::vec3), &indexed_normals[0], GL_STATIC_DRAW);
+
+	// Generate a buffer for the indices as well
+	GLuint elementbuffer;
+	glGenBuffers(1, &elementbuffer);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned short), &indices[0] , GL_STATIC_DRAW);
+
+		glEnableVertexAttribArray(0);
+		glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
+		glVertexAttribPointer(
+			0,                  // attribute
+			3,                  // size
+			GL_FLOAT,           // type
+			GL_FALSE,           // normalized?
+			0,                  // stride
+			(void*)0            // array buffer offset
+		);
+
+		// 2nd attribute buffer : UVs
+		glEnableVertexAttribArray(1);
+		glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
+		glVertexAttribPointer(
+			1,                                // attribute
+			2,                                // size
+			GL_FLOAT,                         // type
+			GL_FALSE,                         // normalized?
+			0,                                // stride
+			(void*)0                          // array buffer offset
+		);
+
+		// 3rd attribute buffer : normals
+		glEnableVertexAttribArray(2);
+		glBindBuffer(GL_ARRAY_BUFFER, normalbuffer);
+		glVertexAttribPointer(
+			2,                                // attribute
+			3,                                // size
+			GL_FLOAT,                         // type
+			GL_FALSE,                         // normalized?
+			0,                                // stride
+			(void*)0                          // array buffer offset
+		);
+
+		// Index buffer
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer);
+
+//model 2
+	GLuint VertexArrayID2;
+	glGenVertexArrays(1, &VertexArrayID2);
+	glBindVertexArray(VertexArrayID2);
+
+// Read our .obj file
+	std::vector<unsigned short> indices2;
+	std::vector<glm::vec3> indexed_vertices2;
+	std::vector<glm::vec2> indexed_uvs2;
+	std::vector<glm::vec3> indexed_normals2;
+	bool res2 = loadAssImp("assets/geometry/suzanne.obj", indices2, indexed_vertices2, indexed_uvs2, indexed_normals2);
+
+	// Load it into a VBO
+
+	GLuint vertexbuffer2;
+	glGenBuffers(1, &vertexbuffer2);
+	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer2);
+	glBufferData(GL_ARRAY_BUFFER, indexed_vertices2.size() * sizeof(glm::vec3), &indexed_vertices2[0], GL_STATIC_DRAW);
+
+	GLuint uvbuffer2;
+	glGenBuffers(1, &uvbuffer2);
+	glBindBuffer(GL_ARRAY_BUFFER, uvbuffer2);
+	glBufferData(GL_ARRAY_BUFFER, indexed_uvs2.size() * sizeof(glm::vec2), &indexed_uvs2[0], GL_STATIC_DRAW);
+
+	GLuint normalbuffer2;
+	glGenBuffers(1, &normalbuffer2);
+	glBindBuffer(GL_ARRAY_BUFFER, normalbuffer2);
+	glBufferData(GL_ARRAY_BUFFER, indexed_normals2.size() * sizeof(glm::vec3), &indexed_normals2[0], GL_STATIC_DRAW);
+
+	// Generate a buffer for the indices as well
+	GLuint elementbuffer2;
+	glGenBuffers(1, &elementbuffer2);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer2);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices2.size() * sizeof(unsigned short), &indices2[0] , GL_STATIC_DRAW);
+
+		glEnableVertexAttribArray(0);
+		glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer2);
+		glVertexAttribPointer(
+			0,                  // attribute
+			3,                  // size
+			GL_FLOAT,           // type
+			GL_FALSE,           // normalized?
+			0,                  // stride
+			(void*)0            // array buffer offset
+		);
+
+		// 2nd attribute buffer : UVs
+		glEnableVertexAttribArray(1);
+		glBindBuffer(GL_ARRAY_BUFFER, uvbuffer2);
+		glVertexAttribPointer(
+			1,                                // attribute
+			2,                                // size
+			GL_FLOAT,                         // type
+			GL_FALSE,                         // normalized?
+			0,                                // stride
+			(void*)0                          // array buffer offset
+		);
+
+		// 3rd attribute buffer : normals
+		glEnableVertexAttribArray(2);
+		glBindBuffer(GL_ARRAY_BUFFER, normalbuffer2);
+		glVertexAttribPointer(
+			2,                                // attribute
+			3,                                // size
+			GL_FLOAT,                         // type
+			GL_FALSE,                         // normalized?
+			0,                                // stride
+			(void*)0                          // array buffer offset
+		);
+
+		// Index buffer
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer2);
+
+// end of model 2
 
 	// Get a handle for our "LightPosition" uniform
 	glUseProgram(programID);
@@ -270,6 +304,7 @@ int main( void )
 	int nbFrames = 0;
 
 	do{
+
 		// Measure speed
 		double currentTime = glfwGetTime();
 		nbFrames++;
@@ -291,7 +326,6 @@ int main( void )
 		glm::mat4 ProjectionMatrix = getProjectionMatrix();
 		glm::mat4 ViewMatrix = getViewMatrix();
 		glm::mat4 ModelMatrix = glm::mat4(1.0);
-
 		glm::mat4 MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
 
 		// Send our transformation to the currently bound shader, 
@@ -300,12 +334,49 @@ int main( void )
 		glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
 		glUniformMatrix4fv(ViewMatrixID, 1, GL_FALSE, &ViewMatrix[0][0]);
 
-		glm::vec3 lightPos = glm::vec3(4,4,40);
+		glm::vec3 lightPos = glm::vec3(4,4,4);
 		glUniform3f(LightID, lightPos.x, lightPos.y, lightPos.z);
 
-		// Render the model
-		glBindVertexArray(VAO);
-		glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+		// Bind our texture in Texture Unit 0
+		glActiveTexture(GL_TEXTURE0);
+		// glBindTexture(GL_TEXTURE_2D, textureID);
+		// Set our "myTextureSampler" sampler to use Texture Unit 0
+		glUniform1i(TextureID, 0);
+
+		glBindVertexArray(VertexArrayID);
+		//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer);
+
+		// Draw the triangles !
+		glDrawElements(
+			GL_TRIANGLES,      // mode
+			indices.size(),    // count
+			GL_UNSIGNED_SHORT,   // type
+			(void*)0           // element array buffer offset
+		);
+
+		glBindVertexArray(0);
+
+		glBindVertexArray(VertexArrayID2);
+		glActiveTexture(GL_TEXTURE1);
+		glUniform1i(TextureID, 1);
+		// glBindTexture(GL_TEXTURE_2D, textureID2);
+		glm::mat4 ModelMatrix2 = glm::mat4(1.0);
+		ModelMatrix2 = glm::translate(ModelMatrix2, glm::vec3(2.0f, 0.0f, 0.0f));
+		glm::mat4 MVP2 = ProjectionMatrix * ViewMatrix * ModelMatrix2;
+
+		// Send our transformation to the currently bound shader, 
+		// in the "MVP" uniform
+		glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVP2[0][0]);
+		glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix2[0][0]);
+		
+		// Draw the triangles !
+		glDrawElements(
+			GL_TRIANGLES,      // mode
+			indices2.size(),    // count
+			GL_UNSIGNED_SHORT,   // type
+			(void*)0           // element array buffer offset
+		);
+
 		glBindVertexArray(0);
 
 		// Swap buffers
@@ -315,6 +386,15 @@ int main( void )
 	} // Check if the ESC key was pressed or the window was closed
 	while( glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
 		   glfwWindowShouldClose(window) == 0 );
+
+	// Cleanup VBO and shader
+	glDeleteBuffers(1, &vertexbuffer);
+	glDeleteBuffers(1, &uvbuffer);
+	glDeleteBuffers(1, &normalbuffer);
+	glDeleteBuffers(1, &elementbuffer);
+	glDeleteProgram(programID);
+	// glDeleteTextures(1, &Texture);
+	glDeleteVertexArrays(1, &VertexArrayID);
 
 	// Close OpenGL window and terminate GLFW
 	glfwTerminate();
