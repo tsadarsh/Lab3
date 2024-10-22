@@ -9,6 +9,7 @@ void c_loadOBJ(std::string path,
     std::vector<unsigned short>&,
 	std::vector<glm::vec3>&,
 	std::vector<glm::vec2>&,
-	std::vector<glm::vec3>&);
+	std::vector<glm::vec3>&,
+	int);
 
 #endif

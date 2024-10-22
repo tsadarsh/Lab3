@@ -15,13 +15,16 @@ using namespace glm;
 #include <common/objloader.hpp>
 #include <common/vboindexer.hpp>
 
+#include "custom_objloader.hpp"
+
 void c_loadOBJ(std::string path, 
     std::vector<unsigned short>& indices,
 	std::vector<glm::vec3>& indexed_vertices,
 	std::vector<glm::vec2>& indexed_uvs,
-	std::vector<glm::vec3>& indexed_normals) {
+	std::vector<glm::vec3>& indexed_normals,
+	int index) {
 // Read our .obj file
-	bool res = loadAssImp(path.c_str(), indices, indexed_vertices, indexed_uvs, indexed_normals);
+	bool res = c_loadAssImp(path.c_str(), indices, indexed_vertices, indexed_uvs, indexed_normals, index);
 
 	// Load it into a VBO
 

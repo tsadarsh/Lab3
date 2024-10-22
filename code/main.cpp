@@ -89,9 +89,6 @@ int main( void )
 	// Cull triangles which normal is not towards the camera
 	glEnable(GL_CULL_FACE);
 
-	GLuint VertexArrayID;
-	glGenVertexArrays(1, &VertexArrayID);
-	glBindVertexArray(VertexArrayID);
 
 	// Create and compile our GLSL program from the shaders
 	GLuint programID = LoadShaders( "shaders/StandardShading.vertexshader", "shaders/StandardShading.fragmentshader" );
@@ -159,69 +156,11 @@ int main( void )
 	std::vector<glm::vec3> indexed_vertices;
 	std::vector<glm::vec2> indexed_uvs;
 	std::vector<glm::vec3> indexed_normals;
-	bool res = loadAssImp("assets/geometry/chess-board.obj", indices, indexed_vertices, indexed_uvs, indexed_normals);
-
-	// Load it into a VBO
-
-	GLuint vertexbuffer;
-	glGenBuffers(1, &vertexbuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-	glBufferData(GL_ARRAY_BUFFER, indexed_vertices.size() * sizeof(glm::vec3), &indexed_vertices[0], GL_STATIC_DRAW);
-
-	GLuint uvbuffer;
-	glGenBuffers(1, &uvbuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
-	glBufferData(GL_ARRAY_BUFFER, indexed_uvs.size() * sizeof(glm::vec2), &indexed_uvs[0], GL_STATIC_DRAW);
-
-	GLuint normalbuffer;
-	glGenBuffers(1, &normalbuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, normalbuffer);
-	glBufferData(GL_ARRAY_BUFFER, indexed_normals.size() * sizeof(glm::vec3), &indexed_normals[0], GL_STATIC_DRAW);
-
-	// Generate a buffer for the indices as well
-	GLuint elementbuffer;
-	glGenBuffers(1, &elementbuffer);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned short), &indices[0] , GL_STATIC_DRAW);
-
-		glEnableVertexAttribArray(0);
-		glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-		glVertexAttribPointer(
-			0,                  // attribute
-			3,                  // size
-			GL_FLOAT,           // type
-			GL_FALSE,           // normalized?
-			0,                  // stride
-			(void*)0            // array buffer offset
-		);
-
-		// 2nd attribute buffer : UVs
-		glEnableVertexAttribArray(1);
-		glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
-		glVertexAttribPointer(
-			1,                                // attribute
-			2,                                // size
-			GL_FLOAT,                         // type
-			GL_FALSE,                         // normalized?
-			0,                                // stride
-			(void*)0                          // array buffer offset
-		);
-
-		// 3rd attribute buffer : normals
-		glEnableVertexAttribArray(2);
-		glBindBuffer(GL_ARRAY_BUFFER, normalbuffer);
-		glVertexAttribPointer(
-			2,                                // attribute
-			3,                                // size
-			GL_FLOAT,                         // type
-			GL_FALSE,                         // normalized?
-			0,                                // stride
-			(void*)0                          // array buffer offset
-		);
-
-		// Index buffer
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer);
-
+	GLuint VertexArrayID;
+	glGenVertexArrays(1, &VertexArrayID);
+	glBindVertexArray(VertexArrayID);
+	c_loadOBJ("assets/geometry/chess-board.obj", indices, indexed_vertices, indexed_uvs, indexed_normals, 0);
+	
 	std::vector<unsigned short> indices2;
 	std::vector<glm::vec3> indexed_vertices2;
 	std::vector<glm::vec2> indexed_uvs2;
@@ -230,82 +169,7 @@ int main( void )
 	glGenVertexArrays(1, &VertexArrayID2);
 	glBindVertexArray(VertexArrayID2);
 	std::string pathNew = "assets/geometry/new-pieces.obj";
-	c_loadOBJ(pathNew, indices2, indexed_vertices2, indexed_uvs2, indexed_normals2);
-
-// //model 2
-// 	GLuint VertexArrayID2;
-// 	glGenVertexArrays(1, &VertexArrayID2);
-// 	glBindVertexArray(VertexArrayID2);
-
-// // Read our .obj file
-// 	std::vector<unsigned short> indices2;
-// 	std::vector<glm::vec3> indexed_vertices2;
-// 	std::vector<glm::vec2> indexed_uvs2;
-// 	std::vector<glm::vec3> indexed_normals2;
-// 	bool res2 = loadAssImp("assets/geometry/new-pieces.obj", indices2, indexed_vertices2, indexed_uvs2, indexed_normals2);
-
-// 	// Load it into a VBO
-
-// 	GLuint vertexbuffer2;
-// 	glGenBuffers(1, &vertexbuffer2);
-// 	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer2);
-// 	glBufferData(GL_ARRAY_BUFFER, indexed_vertices2.size() * sizeof(glm::vec3), &indexed_vertices2[0], GL_STATIC_DRAW);
-
-// 	GLuint uvbuffer2;
-// 	glGenBuffers(1, &uvbuffer2);
-// 	glBindBuffer(GL_ARRAY_BUFFER, uvbuffer2);
-// 	glBufferData(GL_ARRAY_BUFFER, indexed_uvs2.size() * sizeof(glm::vec2), &indexed_uvs2[0], GL_STATIC_DRAW);
-
-// 	GLuint normalbuffer2;
-// 	glGenBuffers(1, &normalbuffer2);
-// 	glBindBuffer(GL_ARRAY_BUFFER, normalbuffer2);
-// 	glBufferData(GL_ARRAY_BUFFER, indexed_normals2.size() * sizeof(glm::vec3), &indexed_normals2[0], GL_STATIC_DRAW);
-
-// 	// Generate a buffer for the indices as well
-// 	GLuint elementbuffer2;
-// 	glGenBuffers(1, &elementbuffer2);
-// 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer2);
-// 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices2.size() * sizeof(unsigned short), &indices2[0] , GL_STATIC_DRAW);
-
-// 		glEnableVertexAttribArray(0);
-// 		glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer2);
-// 		glVertexAttribPointer(
-// 			0,                  // attribute
-// 			3,                  // size
-// 			GL_FLOAT,           // type
-// 			GL_FALSE,           // normalized?
-// 			0,                  // stride
-// 			(void*)0            // array buffer offset
-// 		);
-
-// 		// 2nd attribute buffer : UVs
-// 		glEnableVertexAttribArray(1);
-// 		glBindBuffer(GL_ARRAY_BUFFER, uvbuffer2);
-// 		glVertexAttribPointer(
-// 			1,                                // attribute
-// 			2,                                // size
-// 			GL_FLOAT,                         // type
-// 			GL_FALSE,                         // normalized?
-// 			0,                                // stride
-// 			(void*)0                          // array buffer offset
-// 		);
-
-// 		// 3rd attribute buffer : normals
-// 		glEnableVertexAttribArray(2);
-// 		glBindBuffer(GL_ARRAY_BUFFER, normalbuffer2);
-// 		glVertexAttribPointer(
-// 			2,                                // attribute
-// 			3,                                // size
-// 			GL_FLOAT,                         // type
-// 			GL_FALSE,                         // normalized?
-// 			0,                                // stride
-// 			(void*)0                          // array buffer offset
-// 		);
-
-// 		// Index buffer
-// 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer2);
-
-// end of model 2
+	c_loadOBJ(pathNew, indices2, indexed_vertices2, indexed_uvs2, indexed_normals2, 2);
 
 	// Get a handle for our "LightPosition" uniform
 	glUseProgram(programID);
@@ -400,10 +264,10 @@ int main( void )
 		   glfwWindowShouldClose(window) == 0 );
 
 	// Cleanup VBO and shader
-	glDeleteBuffers(1, &vertexbuffer);
-	glDeleteBuffers(1, &uvbuffer);
-	glDeleteBuffers(1, &normalbuffer);
-	glDeleteBuffers(1, &elementbuffer);
+	// glDeleteBuffers(1, &vertexbuffer);
+	// glDeleteBuffers(1, &uvbuffer);
+	// glDeleteBuffers(1, &normalbuffer);
+	// glDeleteBuffers(1, &elementbuffer);
 	glDeleteProgram(programID);
 	// glDeleteTextures(1, &Texture);
 	glDeleteVertexArrays(1, &VertexArrayID);
