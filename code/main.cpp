@@ -26,13 +26,14 @@ using namespace glm;
 #include <common/objloader.hpp>
 #include <common/vboindexer.hpp>
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
-
 
 std::vector<GLuint> textures; 
 GLuint textureID;
 GLuint textureID2;
+std::vector<GLuint> VAOs;
+std::vector<GLuint> TEXTURE_UNITS;
+std::vector<glm::mat4> model_matrices;
+std::vector<GLsizei> indices_size;
 
 int main( void )
 {
@@ -69,26 +70,14 @@ int main( void )
 		return -1;
 	}
 
-	// Ensure we can capture the escape key being pressed below
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
-    // Hide the mouse and enable unlimited movement
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    
-    // Set the mouse at the center of the screen
     glfwPollEvents();
     glfwSetCursorPos(window, 1024/2, 768/2);
-
-	// Dark blue background
 	glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
-
-	// Enable depth test
 	glEnable(GL_DEPTH_TEST);
-	// Accept fragment if it is closer to the camera than the former one
 	glDepthFunc(GL_LESS); 
-
-	// Cull triangles which normal is not towards the camera
 	glEnable(GL_CULL_FACE);
-
 
 	// Create and compile our GLSL program from the shaders
 	GLuint programID = LoadShaders( "shaders/StandardShading.vertexshader", "shaders/StandardShading.fragmentshader" );
@@ -98,56 +87,18 @@ int main( void )
 	GLuint ViewMatrixID = glGetUniformLocation(programID, "V");
 	GLuint ModelMatrixID = glGetUniformLocation(programID, "M");
 
-	// Load the texture
-	std::string fullPath = "assets/textures/12951_Stone_Chess_Board_diff_flipped.jpg";
-	int width, height, nrChannels;
-	unsigned char* data = stbi_load(fullPath.c_str(), &width, &height, &nrChannels, 0);
-	if (data) {
-		glActiveTexture(GL_TEXTURE0);
-		glGenTextures(1, &textureID);
-		glBindTexture(GL_TEXTURE_2D, textureID);
+	GLuint tID;
 
-		textures.push_back(textureID);
-		
-		// Load the texture data into OpenGL
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-		glGenerateMipmap(GL_TEXTURE_2D);
-		
-		// Set texture parameters
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		
-		stbi_image_free(data); // Free the image memory after uploading to GPU
-	} else {
-		std::cerr << "Failed to load texture: " << fullPath << std::endl;
-	}
+	glActiveTexture(GL_TEXTURE0);
+	tID = c_loadTexture("assets/textures/12951_Stone_Chess_Board_diff_flipped.jpg");
+	textures.push_back(tID);
+	TEXTURE_UNITS.push_back(GL_TEXTURE0);
 
-	std::string fullPath2 = "assets/textures/uvmap.jpg";
-	int width2, height2, nrChannels2;
-	unsigned char* data2 = stbi_load(fullPath2.c_str(), &width2, &height2, &nrChannels2, 0);
-	if (data2) {
-		glActiveTexture(GL_TEXTURE1);
-		glGenTextures(1, &textureID2);
-		glBindTexture(GL_TEXTURE_2D, textureID2);
+	glActiveTexture(GL_TEXTURE1);
+	tID = c_loadTexture("assets/textures/uvmap.jpg");
+	textures.push_back(tID);
+	TEXTURE_UNITS.push_back(GL_TEXTURE1);
 
-		textures.push_back(textureID2);
-		
-		// Load the texture data into OpenGL
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width2, height2, 0, GL_RGB, GL_UNSIGNED_BYTE, data2);
-		glGenerateMipmap(GL_TEXTURE_2D);
-		
-		// Set texture parameters
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		
-		stbi_image_free(data2); // Free the image memory after uploading to GPU
-	} else {
-		std::cerr << "Failed to load texture: " << fullPath2 << std::endl;
-	}
 	// Get a handle for our "myTextureSampler" uniform
 	GLuint TextureID  = glGetUniformLocation(programID, "myTextureSampler");
 
@@ -159,7 +110,11 @@ int main( void )
 	GLuint VertexArrayID;
 	glGenVertexArrays(1, &VertexArrayID);
 	glBindVertexArray(VertexArrayID);
+	VAOs.push_back(VertexArrayID);
 	c_loadOBJ("assets/geometry/chess-board.obj", indices, indexed_vertices, indexed_uvs, indexed_normals, 0);
+	glm::mat4 ModelMatrix = glm::mat4(1.0);
+	model_matrices.push_back(ModelMatrix);
+	indices_size.push_back(indices.size());
 	
 	std::vector<unsigned short> indices2;
 	std::vector<glm::vec3> indexed_vertices2;
@@ -168,8 +123,13 @@ int main( void )
 	GLuint VertexArrayID2;
 	glGenVertexArrays(1, &VertexArrayID2);
 	glBindVertexArray(VertexArrayID2);
+	VAOs.push_back(VertexArrayID2);
 	std::string pathNew = "assets/geometry/new-pieces.obj";
 	c_loadOBJ(pathNew, indices2, indexed_vertices2, indexed_uvs2, indexed_normals2, 2);
+	glm::mat4 ModelMatrix2 = glm::mat4(1.0);
+	ModelMatrix2 = glm::translate(ModelMatrix2, glm::vec3(2.0f, 0.0f, 0.0f));
+	model_matrices.push_back(ModelMatrix2);
+	indices_size.push_back(indices2.size());
 
 	// Get a handle for our "LightPosition" uniform
 	glUseProgram(programID);
@@ -179,6 +139,7 @@ int main( void )
 	double lastTime = glfwGetTime();
 	int nbFrames = 0;
 
+	glm::mat4 MVP;
 	do{
 
 		// Measure speed
@@ -201,59 +162,76 @@ int main( void )
 		computeMatricesFromInputs();
 		glm::mat4 ProjectionMatrix = getProjectionMatrix();
 		glm::mat4 ViewMatrix = getViewMatrix();
-		glm::mat4 ModelMatrix = glm::mat4(1.0);
-		glm::mat4 MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
-
-		// Send our transformation to the currently bound shader, 
-		// in the "MVP" uniform
-		glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVP[0][0]);
-		glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
 		glUniformMatrix4fv(ViewMatrixID, 1, GL_FALSE, &ViewMatrix[0][0]);
-
 		glm::vec3 lightPos = glm::vec3(4,4,4);
 		glUniform3f(LightID, lightPos.x, lightPos.y, lightPos.z);
 
-		// Bind our texture in Texture Unit 0
-		glActiveTexture(GL_TEXTURE0);
-		// glBindTexture(GL_TEXTURE_2D, textureID);
-		// Set our "myTextureSampler" sampler to use Texture Unit 0
-		glUniform1i(TextureID, 0);
+		for (int iObj = 0; iObj < VAOs.size(); iObj++)
+		{
+			ModelMatrix = model_matrices[iObj];
+			MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
+			glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVP[0][0]);
+			glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
+			glActiveTexture(TEXTURE_UNITS[iObj]);
+			glUniform1i(TextureID, iObj); // do not use textures[iObj]
+			glBindVertexArray(VAOs[iObj]);
+			glDrawElements(GL_TRIANGLES, indices_size[iObj], GL_UNSIGNED_SHORT, (void*)0);
 
-		glBindVertexArray(VertexArrayID);
-		//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer);
+			glBindVertexArray(0);
+		}
+		// glm::mat4 ModelMatrix = glm::mat4(1.0);
+		// glm::mat4 MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
 
-		// Draw the triangles !
-		glDrawElements(
-			GL_TRIANGLES,      // mode
-			indices.size(),    // count
-			GL_UNSIGNED_SHORT,   // type
-			(void*)0           // element array buffer offset
-		);
+		// // Send our transformation to the currently bound shader, 
+		// // in the "MVP" uniform
+		// glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVP[0][0]);
+		// glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
+		// glUniformMatrix4fv(ViewMatrixID, 1, GL_FALSE, &ViewMatrix[0][0]);
 
-		glBindVertexArray(0);
+		// glm::vec3 lightPos = glm::vec3(4,4,4);
+		// glUniform3f(LightID, lightPos.x, lightPos.y, lightPos.z);
 
-		glBindVertexArray(VertexArrayID2);
-		glActiveTexture(GL_TEXTURE1);
-		glUniform1i(TextureID, 1);
-		// glBindTexture(GL_TEXTURE_2D, textureID2);
-		glm::mat4 ModelMatrix2 = glm::mat4(1.0);
-		ModelMatrix2 = glm::translate(ModelMatrix2, glm::vec3(2.0f, 0.0f, 0.0f));
-		glm::mat4 MVP2 = ProjectionMatrix * ViewMatrix * ModelMatrix2;
+		// // Bind our texture in Texture Unit 0
+		// glActiveTexture(GL_TEXTURE0);
+		// // glBindTexture(GL_TEXTURE_2D, textureID);
+		// // Set our "myTextureSampler" sampler to use Texture Unit 0
+		// glUniform1i(TextureID, 0);
 
-		// Send our transformation to the currently bound shader, 
-		// in the "MVP" uniform
-		glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVP2[0][0]);
-		glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix2[0][0]);
+		// glBindVertexArray(VertexArrayID);
+		// //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer);
+
+		// // Draw the triangles !
+		// glDrawElements(
+		// 	GL_TRIANGLES,      // mode
+		// 	indices.size(),    // count
+		// 	GL_UNSIGNED_SHORT,   // type
+		// 	(void*)0           // element array buffer offset
+		// );
+
+		// glBindVertexArray(0);
+
+		// glBindVertexArray(VertexArrayID2);
+		// glActiveTexture(GL_TEXTURE1);
+		// glUniform1i(TextureID, 1);
+		// // glBindTexture(GL_TEXTURE_2D, textureID2);
+		// glm::mat4 ModelMatrix2 = glm::mat4(1.0);
+		// ModelMatrix2 = glm::translate(ModelMatrix2, glm::vec3(2.0f, 0.0f, 0.0f));
+		// glm::mat4 MVP2 = ProjectionMatrix * ViewMatrix * ModelMatrix2;
+
+		// // Send our transformation to the currently bound shader, 
+		// // in the "MVP" uniform
+		// glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVP2[0][0]);
+		// glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix2[0][0]);
 		
-		// Draw the triangles !
-		glDrawElements(
-			GL_TRIANGLES,      // mode
-			indices2.size(),    // count
-			GL_UNSIGNED_SHORT,   // type
-			(void*)0           // element array buffer offset
-		);
+		// // Draw the triangles !
+		// glDrawElements(
+		// 	GL_TRIANGLES,      // mode
+		// 	indices2.size(),    // count
+		// 	GL_UNSIGNED_SHORT,   // type
+		// 	(void*)0           // element array buffer offset
+		// );
 
-		glBindVertexArray(0);
+		// glBindVertexArray(0);
 
 		// Swap buffers
 		glfwSwapBuffers(window);

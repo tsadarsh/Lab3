@@ -12,4 +12,6 @@ void c_loadOBJ(std::string path,
 	std::vector<glm::vec3>&,
 	int);
 
+GLuint c_loadTexture (std::string);
+
 #endif
