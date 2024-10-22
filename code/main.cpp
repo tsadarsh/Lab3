@@ -103,33 +103,24 @@ int main( void )
 	GLuint TextureID  = glGetUniformLocation(programID, "myTextureSampler");
 
 	// Read our .obj file
-	std::vector<unsigned short> indices;
-	std::vector<glm::vec3> indexed_vertices;
-	std::vector<glm::vec2> indexed_uvs;
-	std::vector<glm::vec3> indexed_normals;
-	GLuint VertexArrayID;
-	glGenVertexArrays(1, &VertexArrayID);
-	glBindVertexArray(VertexArrayID);
-	VAOs.push_back(VertexArrayID);
-	c_loadOBJ("assets/geometry/chess-board.obj", indices, indexed_vertices, indexed_uvs, indexed_normals, 0);
-	glm::mat4 ModelMatrix = glm::mat4(1.0);
+	GLuint VAO_ID;
+	GLsizei IDX_size;
+	glm::mat4 ModelMatrix;
+
+	VAO_ID = c_loadOBJ("assets/geometry/chess-board.obj", 0, IDX_size);
+	VAOs.push_back(VAO_ID);
+	ModelMatrix = glm::mat4(1.0);
 	model_matrices.push_back(ModelMatrix);
-	indices_size.push_back(indices.size());
+	indices_size.push_back(IDX_size);
 	
-	std::vector<unsigned short> indices2;
-	std::vector<glm::vec3> indexed_vertices2;
-	std::vector<glm::vec2> indexed_uvs2;
-	std::vector<glm::vec3> indexed_normals2;
-	GLuint VertexArrayID2;
-	glGenVertexArrays(1, &VertexArrayID2);
-	glBindVertexArray(VertexArrayID2);
-	VAOs.push_back(VertexArrayID2);
-	std::string pathNew = "assets/geometry/new-pieces.obj";
-	c_loadOBJ(pathNew, indices2, indexed_vertices2, indexed_uvs2, indexed_normals2, 2);
-	glm::mat4 ModelMatrix2 = glm::mat4(1.0);
-	ModelMatrix2 = glm::translate(ModelMatrix2, glm::vec3(2.0f, 0.0f, 0.0f));
-	model_matrices.push_back(ModelMatrix2);
-	indices_size.push_back(indices2.size());
+	for (int i = 0; i < 12; i++) 
+	{
+		VAO_ID = c_loadOBJ("assets/geometry/new-pieces.obj", i, IDX_size);
+		VAOs.push_back(VAO_ID);
+		ModelMatrix = glm::mat4(1.0);
+		model_matrices.push_back(ModelMatrix);
+		indices_size.push_back(IDX_size);
+	}
 
 	// Get a handle for our "LightPosition" uniform
 	glUseProgram(programID);
@@ -248,7 +239,7 @@ int main( void )
 	// glDeleteBuffers(1, &elementbuffer);
 	glDeleteProgram(programID);
 	// glDeleteTextures(1, &Texture);
-	glDeleteVertexArrays(1, &VertexArrayID);
+	// glDeleteVertexArrays(1, &VertexArrayID);
 
 	// Close OpenGL window and terminate GLFW
 	glfwTerminate();

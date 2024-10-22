@@ -20,12 +20,15 @@ using namespace glm;
 
 #include "custom_objloader.hpp"
 
-void c_loadOBJ(std::string path, 
-    std::vector<unsigned short>& indices,
-	std::vector<glm::vec3>& indexed_vertices,
-	std::vector<glm::vec2>& indexed_uvs,
-	std::vector<glm::vec3>& indexed_normals,
-	int index) {
+GLuint c_loadOBJ(std::string path, int index, GLsizei& index_size) {
+
+	std::vector<unsigned short> indices;
+	std::vector<glm::vec3> indexed_vertices;
+	std::vector<glm::vec2> indexed_uvs;
+	std::vector<glm::vec3> indexed_normals;
+	GLuint VertexArrayID;
+	glGenVertexArrays(1, &VertexArrayID);
+	glBindVertexArray(VertexArrayID);
 // Read our .obj file
 	bool res = c_loadAssImp(path.c_str(), indices, indexed_vertices, indexed_uvs, indexed_normals, index);
 
@@ -89,6 +92,9 @@ void c_loadOBJ(std::string path,
 
 		// Index buffer
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer);
+
+		index_size = indices.size();
+		return VertexArrayID;
 }
 
 
