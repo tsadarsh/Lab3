@@ -29,13 +29,17 @@ using namespace glm;
 #include <assimp/postprocess.h>     // Post processing flags
 
 
-std::vector<GLuint> texturesIds; 
-GLuint textureID;
-GLuint textureID2;
-std::vector<GLuint> VAOs;
-std::vector<GLuint> TEXTURE_UNITS;
-std::vector<glm::mat4> model_matrices;
-std::vector<GLsizei> indices_size;
+std::vector<GLuint> texturesIds; // #TODO: couple with objDetails
+
+struct objDetails {
+	std::string name;
+	glm::mat4 ModelMatrix;
+	GLuint VAO_ID;
+	GLsizei indices_size;
+	GLuint textureID;
+};
+
+std::vector<objDetails> allObjects;
 
 int main( void )
 {
@@ -101,20 +105,62 @@ int main( void )
 	GLsizei IDX_size;
 	glm::mat4 ModelMatrix;
 
+	objDetails chessBoardObj;
 	VAO_ID = c_loadOBJ("assets/geometry/chess-board.obj", 0, IDX_size, texturesIds, 0);
-	VAOs.push_back(VAO_ID);
-	ModelMatrix = glm::mat4(1.0);
-	model_matrices.push_back(ModelMatrix);
-	indices_size.push_back(IDX_size);
+	chessBoardObj.VAO_ID = VAO_ID;
+	glm::mat4 myScalingMatrix = glm::scale(glm::mat4(1), glm::vec3(1,1,1));
+	chessBoardObj.ModelMatrix = myScalingMatrix;
+	chessBoardObj.indices_size = IDX_size;
+	chessBoardObj.textureID = texturesIds.back();
+	allObjects.push_back(chessBoardObj);
 	
-	for (int i = 0; i < 1; i++) 
+	for (int i = 0; i < 12; i++) 
 	{
+		objDetails chessPieceObj;
 		VAO_ID = c_loadOBJ("assets/geometry/new-pieces.obj", i, IDX_size, texturesIds, 0);
-		VAOs.push_back(VAO_ID);
-		ModelMatrix = glm::mat4(1.0);
-		model_matrices.push_back(ModelMatrix);
-		indices_size.push_back(IDX_size);
+		chessPieceObj.VAO_ID = VAO_ID;
+		chessPieceObj.ModelMatrix = glm::mat4(1.0);
+		chessPieceObj.indices_size = IDX_size;
+		chessPieceObj.textureID = texturesIds.back();
+		allObjects.push_back(chessPieceObj);
 	}
+
+	// Translating each piece by eyeballing
+	for (int i=0; i < 7; i++)
+	{
+		objDetails w_pawn = allObjects[1];
+		w_pawn.ModelMatrix = glm::translate(glm::mat4(), glm::vec3(0.125f*(i+1), 0.0f, 0.0f));
+		allObjects.push_back(w_pawn);
+	}
+	objDetails w_rook = allObjects[2];
+	w_rook.ModelMatrix = glm::translate(glm::mat4(), glm::vec3(0.89f, 0.0f, 0.0f));
+	allObjects.push_back(w_rook);
+
+	objDetails w_knight = allObjects[3];
+	w_knight.ModelMatrix = glm::translate(glm::mat4(), glm::vec3(0.63f, 0.0f, 0.0f));
+	allObjects.push_back(w_knight);
+	
+	objDetails w_bishop = allObjects[4];
+	w_bishop.ModelMatrix = glm::translate(glm::mat4(), glm::vec3(0.38f, 0.0f, 0.0f));
+	allObjects.push_back(w_bishop);
+	
+	for (int i=0; i < 7; i++)
+	{
+		objDetails b_pawn = allObjects[7];
+		b_pawn.ModelMatrix = glm::translate(glm::mat4(), glm::vec3(0.125f*(i+1), 0.0f, 0.0f));
+		allObjects.push_back(b_pawn);
+	}
+	objDetails b_rook = allObjects[8];
+	b_rook.ModelMatrix = glm::translate(glm::mat4(), glm::vec3(0.89f, 0.0f, 0.0f));
+	allObjects.push_back(b_rook);
+
+	objDetails b_knight = allObjects[9];
+	b_knight.ModelMatrix = glm::translate(glm::mat4(), glm::vec3(0.63f, 0.0f, 0.0f));
+	allObjects.push_back(b_knight);
+	
+	objDetails b_bishop = allObjects[10];
+	b_bishop.ModelMatrix = glm::translate(glm::mat4(), glm::vec3(0.38f, 0.0f, 0.0f));
+	allObjects.push_back(b_bishop);
 
 	std::cout << "Got these Texture IDs: " << std::endl;
 	for (int i=0; i < texturesIds.size(); i++)
@@ -158,15 +204,15 @@ int main( void )
 		glm::vec3 lightPos = glm::vec3(4,4,4);
 		glUniform3f(LightID, lightPos.x, lightPos.y, lightPos.z);
 
-		for (int iObj = 0; iObj < VAOs.size(); iObj++)
+		for (int iObj = 0; iObj < allObjects.size(); iObj++)
 		{
-			ModelMatrix = model_matrices[iObj];
+			ModelMatrix = allObjects[iObj].ModelMatrix;
 			MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
 			glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVP[0][0]);
 			glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
-			glBindTexture(GL_TEXTURE_2D, texturesIds[iObj]);
-			glBindVertexArray(VAOs[iObj]);
-			glDrawElements(GL_TRIANGLES, indices_size[iObj], GL_UNSIGNED_SHORT, (void*)0);
+			glBindTexture(GL_TEXTURE_2D, allObjects[iObj].textureID);
+			glBindVertexArray(allObjects[iObj].VAO_ID);
+			glDrawElements(GL_TRIANGLES, allObjects[iObj].indices_size, GL_UNSIGNED_SHORT, (void*)0);
 
 			glBindVertexArray(0);
 		}
