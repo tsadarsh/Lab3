@@ -15,12 +15,12 @@ using namespace glm;
 #include <common/objloader.hpp>
 #include <common/vboindexer.hpp>
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+// #define STB_IMAGE_IMPLEMENTATION
+// #include "stb_image.h"
 
 #include "custom_objloader.hpp"
 
-GLuint c_loadOBJ(std::string path, int index, GLsizei& index_size) {
+GLuint c_loadOBJ(std::string path, int index, GLsizei& index_size, std::vector<GLuint>& texturesIds, unsigned int pp_flags) {
 
 	std::vector<unsigned short> indices;
 	std::vector<glm::vec3> indexed_vertices;
@@ -30,7 +30,7 @@ GLuint c_loadOBJ(std::string path, int index, GLsizei& index_size) {
 	glGenVertexArrays(1, &VertexArrayID);
 	glBindVertexArray(VertexArrayID);
 // Read our .obj file
-	bool res = c_loadAssImp(path.c_str(), indices, indexed_vertices, indexed_uvs, indexed_normals, index);
+	bool res = c_loadAssImp(path.c_str(), indices, indexed_vertices, indexed_uvs, indexed_normals, index, texturesIds, pp_flags);
 
 	// Load it into a VBO
 
@@ -98,32 +98,32 @@ GLuint c_loadOBJ(std::string path, int index, GLsizei& index_size) {
 }
 
 
-GLuint c_loadTexture (std::string path)
-{
-	// Load the texture
-	GLuint textureID;
-	int width, height, nrChannels;
-	unsigned char* data = stbi_load(path.c_str(), &width, &height, &nrChannels, 0);
-	if (data) {
-		glGenTextures(1, &textureID);
-		glBindTexture(GL_TEXTURE_2D, textureID);
-		std::cout << "Texture ID: " << textureID << std::endl;
+// GLuint c_loadTexture (std::string path)
+// {
+// 	// Load the texture
+// 	GLuint textureID;
+// 	int width, height, nrChannels;
+// 	unsigned char* data = stbi_load(path.c_str(), &width, &height, &nrChannels, 0);
+// 	if (data) {
+// 		glGenTextures(1, &textureID);
+// 		glBindTexture(GL_TEXTURE_2D, textureID);
+// 		std::cout << "Texture ID: " << textureID << std::endl;
 		
-		// Load the texture data into OpenGL
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-		glGenerateMipmap(GL_TEXTURE_2D);
+// 		// Load the texture data into OpenGL
+// 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+// 		glGenerateMipmap(GL_TEXTURE_2D);
 		
-		// Set texture parameters
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+// 		// Set texture parameters
+// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		
-		stbi_image_free(data); // Free the image memory after uploading to GPU
-		return textureID;
+// 		stbi_image_free(data); // Free the image memory after uploading to GPU
+// 		return textureID;
 
-	} else {
-		std::cerr << "Failed to load texture: " << path << std::endl;
-	}
-	return 0;
-}
+// 	} else {
+// 		std::cerr << "Failed to load texture: " << path << std::endl;
+// 	}
+// 	return 0;
+// }
