@@ -4,6 +4,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+#include <common/texture.hpp>
+
 bool c_loadAssImp(
 	const char * path, 
 	std::vector<unsigned short> & indices,
@@ -11,7 +13,7 @@ bool c_loadAssImp(
 	std::vector<glm::vec2> & uvs,
 	std::vector<glm::vec3> & normals,
     int meshIndex,
-	std::vector<GLuint>& texturesIds,
+	objDetails& objDetails,
 	unsigned int pp_flags
 ){
 
@@ -59,17 +61,27 @@ bool c_loadAssImp(
 
 	if (mesh->mMaterialIndex >= 0)
 	{
-	aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-	
-	// Now we can process the material and load textures
-	loadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse", texturesIds);
+		aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+		
+		// Now we can process the material and load textures
+		if (objDetails.use_texture_format == "jpg")
+		{
+			loadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse", objDetails);
+		}
+		if (objDetails.use_texture_format == "bmp")
+		{
+			aiString str;
+			material->GetTexture(aiTextureType_DIFFUSE, 0, &str);
+			std::string fullPath = "assets/textures/" + std::string(str.C_Str());
+			objDetails.textureID = loadBMP_custom(fullPath.c_str());
+		}
 	}
 	
 	// The "scene" pointer will be deleted automatically by "importer"
 	return true;
 }
 
-void loadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName, std::vector<GLuint>& texturesIds) {
+void loadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName, objDetails& objDetails) {
 
     for (unsigned int i = 0; i < mat->GetTextureCount(type); i++) {
         aiString str;
@@ -89,7 +101,10 @@ void loadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeN
             glGenTextures(1, &textureID);
             glBindTexture(GL_TEXTURE_2D, textureID);
 
-			texturesIds.push_back(textureID);
+			objDetails.textureID = textureID;
+			objDetails.width = width;
+			objDetails.height = height;
+			objDetails.data = data;
             
             // Load the texture data into OpenGL
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);

@@ -19,8 +19,9 @@ using namespace glm;
 // #include "stb_image.h"
 
 #include "custom_objloader.hpp"
+#include "c_loader.hpp"
 
-GLuint c_loadOBJ(std::string path, int index, GLsizei& index_size, std::vector<GLuint>& texturesIds, unsigned int pp_flags) {
+GLuint c_loadOBJ(std::string path, int index, GLsizei& index_size, objDetails& objDetails, unsigned int pp_flags) {
 
 	std::vector<unsigned short> indices;
 	std::vector<glm::vec3> indexed_vertices;
@@ -30,7 +31,7 @@ GLuint c_loadOBJ(std::string path, int index, GLsizei& index_size, std::vector<G
 	glGenVertexArrays(1, &VertexArrayID);
 	glBindVertexArray(VertexArrayID);
 // Read our .obj file
-	bool res = c_loadAssImp(path.c_str(), indices, indexed_vertices, indexed_uvs, indexed_normals, index, texturesIds, pp_flags);
+	bool res = c_loadAssImp(path.c_str(), indices, indexed_vertices, indexed_uvs, indexed_normals, index, objDetails, pp_flags);
 
 	// Load it into a VBO
 

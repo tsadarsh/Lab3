@@ -8,6 +8,8 @@
 #include <glm/glm.hpp>
 #include <GL/glew.h>
 
+#include "needs.hpp"
+
 bool c_loadAssImp(
 	const char *, 
 	std::vector<unsigned short> &,
@@ -15,10 +17,10 @@ bool c_loadAssImp(
 	std::vector<glm::vec2> &,
 	std::vector<glm::vec3> &,
     int meshIndex,
-	std::vector<GLuint>& texturesIds,
+	objDetails& objDetails,
 	unsigned int pp_flags
 );
 
-void loadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName, std::vector<GLuint>& texturesIds);
+void loadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName, objDetails& objDetails);
 
 #endif

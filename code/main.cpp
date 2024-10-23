@@ -31,14 +31,6 @@ using namespace glm;
 
 std::vector<GLuint> texturesIds; // #TODO: couple with objDetails
 
-struct objDetails {
-	std::string name;
-	glm::mat4 ModelMatrix;
-	GLuint VAO_ID;
-	GLsizei indices_size;
-	GLuint textureID;
-};
-
 std::vector<objDetails> allObjects;
 
 int main( void )
@@ -106,22 +98,24 @@ int main( void )
 	glm::mat4 ModelMatrix;
 
 	objDetails chessBoardObj;
-	VAO_ID = c_loadOBJ("assets/geometry/chess-board.obj", 0, IDX_size, texturesIds, 0);
+	chessBoardObj.use_texture_format = "jpg";
+	VAO_ID = c_loadOBJ("assets/geometry/chess-board.obj", 0, IDX_size, chessBoardObj, 0);
 	chessBoardObj.VAO_ID = VAO_ID;
 	glm::mat4 myScalingMatrix = glm::scale(glm::mat4(1), glm::vec3(1,1,1));
 	chessBoardObj.ModelMatrix = myScalingMatrix;
 	chessBoardObj.indices_size = IDX_size;
-	chessBoardObj.textureID = texturesIds.back();
+	// chessBoardObj.textureID = texturesIds.back();
 	allObjects.push_back(chessBoardObj);
 	
 	for (int i = 0; i < 12; i++) 
 	{
 		objDetails chessPieceObj;
-		VAO_ID = c_loadOBJ("assets/geometry/new-pieces.obj", i, IDX_size, texturesIds, 0);
+		chessPieceObj.use_texture_format = "bmp";
+		VAO_ID = c_loadOBJ("assets/geometry/new-pieces.obj", i, IDX_size, chessPieceObj, 0);
 		chessPieceObj.VAO_ID = VAO_ID;
 		chessPieceObj.ModelMatrix = glm::mat4(1.0);
 		chessPieceObj.indices_size = IDX_size;
-		chessPieceObj.textureID = texturesIds.back();
+		// chessPieceObj.textureID = texturesIds.back();
 		allObjects.push_back(chessPieceObj);
 	}
 
@@ -212,7 +206,12 @@ int main( void )
 			glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
 			glBindTexture(GL_TEXTURE_2D, allObjects[iObj].textureID);
 			glBindVertexArray(allObjects[iObj].VAO_ID);
+			
 			glDrawElements(GL_TRIANGLES, allObjects[iObj].indices_size, GL_UNSIGNED_SHORT, (void*)0);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 			glBindVertexArray(0);
 		}
