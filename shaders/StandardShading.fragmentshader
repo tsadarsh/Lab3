@@ -6,6 +6,7 @@ in vec3 Position_worldspace;
 in vec3 Normal_cameraspace;
 in vec3 EyeDirection_cameraspace;
 in vec3 LightDirection_cameraspace;
+//in int LightStatus;
 
 // Output data
 out vec3 color;
@@ -14,13 +15,14 @@ out vec3 color;
 uniform sampler2D myTextureSampler;
 uniform mat4 MV;
 uniform vec3 LightPosition_worldspace;
+uniform int LightStatus;
 
 void main(){
 
 	// Light emission properties
 	// You probably want to put them as uniforms
-	vec3 LightColor = vec3(1,1,1);
-	float LightPower = 500.0f;
+	vec3 LightColor = vec3(1,0.9,0.8);
+	float LightPower = 200.0f * LightStatus;
 	
 	// Material properties
 	vec3 MaterialDiffuseColor = texture( myTextureSampler, UV ).rgb;

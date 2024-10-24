@@ -22,9 +22,9 @@ using namespace glm;
 
 #include <common/shader.hpp>
 #include <common/texture.hpp>
-#include <common/controls.hpp>
 #include <common/objloader.hpp>
 #include <common/vboindexer.hpp>
+#include "custom_controls.hpp"
 
 #include <assimp/postprocess.h>     // Post processing flags
 
@@ -84,6 +84,7 @@ int main( void )
 	GLuint MatrixID = glGetUniformLocation(programID, "MVP");
 	GLuint ViewMatrixID = glGetUniformLocation(programID, "V");
 	GLuint ModelMatrixID = glGetUniformLocation(programID, "M");
+	GLuint LightStatus = glGetUniformLocation(programID, "LightStatus");
 
 	GLuint tID;
 
@@ -186,17 +187,20 @@ int main( void )
 
 		// Clear the screen
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glClearColor(0.2f, 0.2f, 0.2f, 0.2f);
 
 		// Use our shader
 		glUseProgram(programID);
 
 		// Compute the MVP matrix from keyboard and mouse input
-		computeMatricesFromInputs();
-		glm::mat4 ProjectionMatrix = getProjectionMatrix();
-		glm::mat4 ViewMatrix = getViewMatrix();
+		c_computeMatricesFromInputs();
+
+		glm::mat4 ProjectionMatrix = c_getProjectionMatrix();
+		glm::mat4 ViewMatrix = c_getViewMatrix();
 		glUniformMatrix4fv(ViewMatrixID, 1, GL_FALSE, &ViewMatrix[0][0]);
-		glm::vec3 lightPos = glm::vec3(4,4,4);
+		glm::vec3 lightPos = glm::vec3(7,7,4);
 		glUniform3f(LightID, lightPos.x, lightPos.y, lightPos.z);
+		glUniform1i(LightStatus, c_getLightStatus());
 
 		for (int iObj = 0; iObj < allObjects.size(); iObj++)
 		{
