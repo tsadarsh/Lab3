@@ -1,3 +1,11 @@
+/*
+Author: Adarsh Thirugnansambandam Sriuma
+Class: ECE6122 (A)
+Last Date Modified: Oct 24, 2024
+Description:
+Custom implementation of OBJ file and associated texture loader
+*/
+
 #include <vector>
 #include <iostream>
 

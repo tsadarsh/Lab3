@@ -1,3 +1,11 @@
+/*
+Author: Adarsh Thirugnansambandam Sriuma
+Class: ECE6122 (A)
+Last Date Modified: Oct 24, 2024
+Description:
+Header file
+*/
+
 #ifndef CUSTOM_CONTROLS_HPP
 #define CUSTOM_CONTROLS_HPP
 

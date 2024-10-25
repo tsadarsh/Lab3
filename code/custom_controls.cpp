@@ -1,3 +1,11 @@
+/*
+Author: Adarsh Thirugnansambandam Sriuma
+Class: ECE6122 (A)
+Last Date Modified: Oct 24, 2024
+Description:
+Custom implementation for keyboard controls
+*/
+
 // Include GLFW
 #include <GLFW/glfw3.h>
 extern GLFWwindow* window; // The "extern" keyword here is to access the variable "window" declared in tutorialXXX.cpp. This is a hack to keep the tutorials simple. Please avoid this.

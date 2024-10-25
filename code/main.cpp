@@ -1,33 +1,14 @@
+/*
+Author: Adarsh Thirugnansambandam Sriuma
+Class: ECE6122 (A)
+Last Date Modified: Oct 24, 2024
+Description:
+Main entry point
+*/
+
 // Include standard headers
-#include <stdio.h>
-#include <stdlib.h>
-#include <vector>
-#include <string>
-#include <iostream>
 
-// Include GLEW
-#include <GL/glew.h>
-
-// Include GLFW
-#include <GLFW/glfw3.h>
-GLFWwindow* window;
-
-
-#include "c_loader.hpp"
-
-// Include GLM
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-using namespace glm;
-
-#include <common/shader.hpp>
-#include <common/texture.hpp>
-#include <common/objloader.hpp>
-#include <common/vboindexer.hpp>
-#include "custom_controls.hpp"
-
-#include <assimp/postprocess.h>     // Post processing flags
-
+#include "main.hpp"
 
 std::vector<GLuint> texturesIds; // #TODO: couple with objDetails
 
@@ -228,14 +209,7 @@ int main( void )
 	while( glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
 		   glfwWindowShouldClose(window) == 0 );
 
-	// Cleanup VBO and shader
-	// glDeleteBuffers(1, &vertexbuffer);
-	// glDeleteBuffers(1, &uvbuffer);
-	// glDeleteBuffers(1, &normalbuffer);
-	// glDeleteBuffers(1, &elementbuffer);
 	glDeleteProgram(programID);
-	// glDeleteTextures(1, &Texture);
-	// glDeleteVertexArrays(1, &VertexArrayID);
 
 	// Close OpenGL window and terminate GLFW
 	glfwTerminate();
